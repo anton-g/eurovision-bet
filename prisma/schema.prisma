@@ -1,0 +1,105 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id    String  @id @default(cuid())
+  email String  @unique
+  admin Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  password     Password?
+  bettingPools BettingPool[]
+}
+
+model Password {
+  hash String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String @unique
+}
+
+model BettingPool {
+  id String @id @default(cuid())
+
+  name String
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  ownerId String
+  bets    Bet[]
+}
+
+model Bet {
+  id String @id @default(cuid())
+
+  pool   BettingPool @relation(fields: [poolId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  poolId String
+
+  firstPlace          Country @relation("bet_first_place_country", fields: [firstPlaceCountryId], references: [id])
+  firstPlaceCountryId Int
+
+  secondPlace          Country @relation("bet_second_place_country", fields: [secondPlaceCountryId], references: [id])
+  secondPlaceCountryId Int
+
+  thirdPlace          Country @relation("bet_third_place_country", fields: [thirdPlaceCountryId], references: [id])
+  thirdPlaceCountryId Int
+
+  fourthPlace          Country @relation("bet_fourth_place_country", fields: [fourthPlaceCountryId], references: [id])
+  fourthPlaceCountryId Int
+
+  fifthPlace          Country @relation("bet_fifth_place_country", fields: [fifthPlaceCountryId], references: [id])
+  fifthPlaceCountryId Int
+
+  swedenPosition Int
+
+  name String
+}
+
+model Result {
+  id String @id @default(cuid())
+
+  year Int @unique
+
+  firstPlace          Country @relation("result_first_place_country", fields: [firstPlaceCountryId], references: [id])
+  firstPlaceCountryId Int
+
+  secondPlace          Country @relation("result_second_place_country", fields: [secondPlaceCountryId], references: [id])
+  secondPlaceCountryId Int
+
+  thirdPlace          Country @relation("result_third_place_country", fields: [thirdPlaceCountryId], references: [id])
+  thirdPlaceCountryId Int
+
+  fourthPlace          Country @relation("result_fourth_place_country", fields: [fourthPlaceCountryId], references: [id])
+  fourthPlaceCountryId Int
+
+  fifthPlace          Country @relation("result_fifth_place_country", fields: [fifthPlaceCountryId], references: [id])
+  fifthPlaceCountryId Int
+
+  swedenPosition Int
+}
+
+model Country {
+  id Int @id @default(autoincrement())
+
+  name String
+  code String
+
+  firstPlaceBets  Bet[] @relation("bet_first_place_country")
+  secondPlaceBets Bet[] @relation("bet_second_place_country")
+  thirdPlaceBets  Bet[] @relation("bet_third_place_country")
+  fourthPlaceBets Bet[] @relation("bet_fourth_place_country")
+  fifthPlaceBets  Bet[] @relation("bet_fifth_place_country")
+
+  firstPlaceResults  Result[] @relation("result_first_place_country")
+  secondPlaceResults Result[] @relation("result_second_place_country")
+  thirdPlaceResults  Result[] @relation("result_third_place_country")
+  fourthPlaceResults Result[] @relation("result_fourth_place_country")
+  fifthPlaceResults  Result[] @relation("result_fifth_place_country")
+}
