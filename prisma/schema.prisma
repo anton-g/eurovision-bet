@@ -30,6 +30,7 @@ model BettingPool {
   id String @id @default(cuid())
 
   name String
+  year Int?
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String

@@ -10,6 +10,7 @@ export const action = async ({ request }: ActionArgs) => {
 
   const formData = await request.formData();
   const name = formData.get("name");
+  const year = formData.get("year");
 
   if (typeof name !== "string" || name.length === 0) {
     return json(
@@ -18,7 +19,15 @@ export const action = async ({ request }: ActionArgs) => {
     );
   }
 
-  const pool = await createBettingPool(name, userId);
+  const yearNumber = parseInt(year as string, 10);
+  if (typeof year !== "string" || year.length === 0 || isNaN(yearNumber)) {
+    return json(
+      { errors: { body: null, title: "Name is required" } },
+      { status: 400 }
+    );
+  }
+
+  const pool = await createBettingPool(name, userId, yearNumber);
 
   return redirect(`/pools/${pool.id}`);
 };
@@ -55,6 +64,19 @@ export default function NewPoolPage() {
               actionData?.errors?.title ? "title-error" : undefined
             }
           />
+        </label>
+        <label className="flex w-full flex-col gap-1">
+          <span>Year: </span>
+          <select
+            name="year"
+            className="flex-1 rounded-md border-2 border-blue-500 px-3 py-1 text-lg leading-loose"
+            defaultValue={""}
+          >
+            <option value=""></option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+          </select>
         </label>
         {actionData?.errors?.title ? (
           <div className="pt-1 text-red-700" id="title-error">

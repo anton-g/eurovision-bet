@@ -13,7 +13,7 @@ import { getCountries } from "~/models/country.server";
 import { getResult } from "~/models/result.server";
 import { calculatePoints } from "~/utils";
 
-export const loader = async ({ params }: LoaderArgs) => {
+export const loader = async ({ params, request }: LoaderArgs) => {
   invariant(params.poolId, "poolId not found");
 
   const pool = await getBettingPool(params.poolId);
@@ -21,7 +21,7 @@ export const loader = async ({ params }: LoaderArgs) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const result = await getResult(2023);
+  const result = await getResult(pool.year || 2024);
 
   const bets = calculatePoints(pool.bets, result).sort(
     (a, b) => b.points - a.points
@@ -29,13 +29,45 @@ export const loader = async ({ params }: LoaderArgs) => {
 
   const simulatedResult = simulateResult(pool.bets, await getCountries());
 
-  return json({ pool, bets, result, simulatedResult });
+  const url = new URL(request.url);
+  const compareId = url.searchParams.get("compare");
+
+  let betsWithCompare: (ReturnType<typeof calculatePoints>[0] & {
+    compare?: { points: number; position: number };
+  })[] = bets;
+  if (compareId) {
+    const comparePool = await getBettingPool(compareId);
+    if (!comparePool) {
+      throw new Response("Not Found", { status: 404 });
+    }
+
+    const compareResult = await getResult(comparePool.year || 2024);
+    const compareBets = calculatePoints(comparePool.bets, compareResult).sort(
+      (a, b) => b.points - a.points
+    );
+
+    betsWithCompare = bets.map((bet, index) => {
+      const compareBetIndex = compareBets.findIndex((x) => x.name === bet.name);
+      const compareBet = compareBets[compareBetIndex];
+
+      return {
+        ...bet,
+        compare: compareBet
+          ? { points: compareBet.points, position: compareBetIndex + 1 }
+          : undefined,
+      };
+    });
+  }
+
+  return json({ pool, bets: betsWithCompare, result, simulatedResult });
 };
 
 export default function PoolDetailsPage() {
   const data = useLoaderData<typeof loader>();
 
   const showResult = Boolean(data.result);
+
+  const showComparison = Boolean(data.bets.some((x) => x.compare));
 
   return (
     <div className="mx-auto max-w-fit p-3 pb-16">
@@ -55,9 +87,15 @@ export default function PoolDetailsPage() {
       </div>
       <h4 className="mb-8 text-center text-3xl font-bold">{data.pool.name}</h4>
       <div className="relative max-w-fit overflow-x-auto">
+        {showComparison && (
+          <p className="text-xs text-gray-500">
+            (Förändring från förra årets resultat i parantes)
+          </p>
+        )}
         <table className="text-center text-sm font-light">
           <thead className="border-b font-medium dark:border-neutral-500">
             <tr>
+              <th className="px-3 py-2 text-left"></th>
               <th scope="col" className="px-3 py-2 text-left">
                 Namn
               </th>
@@ -87,10 +125,23 @@ export default function PoolDetailsPage() {
           <tbody>
             {data.bets.map((bet, index) => (
               <tr key={bet.id} className="border-b dark:border-neutral-500">
+                <td className="whitespace-nowrap px-6 py-2 text-left">
+                  {index + 1}
+                  <ComparePosition
+                    position={index + 1}
+                    comparePosition={bet.compare?.position}
+                  />
+                </td>
                 <NameCell showResult={showResult} position={index + 1}>
                   {bet.name}
                 </NameCell>
-                <td className="whitespace-nowrap px-6 py-2">{bet.points}</td>
+                <td className="whitespace-nowrap px-6 py-2 text-left">
+                  {bet.points}
+                  <ComparePoints
+                    points={bet.points}
+                    comparePoints={bet.compare?.points}
+                  />
+                </td>
                 <Cell
                   showResult={showResult}
                   correct={getBetResult(
@@ -165,8 +216,8 @@ export default function PoolDetailsPage() {
         <div>
           <h3 className="mb-2 font-bold">Simulerat resultat</h3>
           <p className="mb-3" style={{ maxWidth: 235 }}>
-            Om våra gissningar istället hade gett poängen 12-10-8-6-4 så hade
-            detta blivit resultatet:
+            Om våra gissningar hade gett poängen 12-10-8-6-4 så hade detta varit
+            resultatet:
           </p>
           <div className="relative max-w-fit overflow-x-auto">
             <table className="text-center text-sm font-light">
@@ -202,6 +253,54 @@ export default function PoolDetailsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ComparePoints({
+  points,
+  comparePoints,
+}: {
+  points: number;
+  comparePoints?: number;
+}) {
+  if (!comparePoints) return null;
+  const diff = points - comparePoints;
+  const isPositiveDiff = diff > 0;
+  const textDiff = isPositiveDiff ? `+${diff}` : diff;
+
+  return (
+    <span
+      className={
+        isPositiveDiff ? "text-xs text-green-600" : "text-xs text-red-600"
+      }
+    >
+      {" "}
+      ({textDiff})
+    </span>
+  );
+}
+
+function ComparePosition({
+  position,
+  comparePosition,
+}: {
+  position: number;
+  comparePosition?: number;
+}) {
+  if (!comparePosition) return null;
+  const diff = comparePosition - position;
+  const isPositiveDiff = diff > 0;
+  const textDiff = isPositiveDiff ? `${diff} ↗` : `${Math.abs(diff)} ↘`;
+
+  return (
+    <span
+      className={
+        isPositiveDiff ? "text-xs text-green-600" : "text-xs text-red-600"
+      }
+    >
+      {" "}
+      ({textDiff})
+    </span>
   );
 }
 
@@ -303,7 +402,6 @@ const getBetResult = (
     return "yes";
   }
 
-  console.log(result, bet[column]);
   if (alternatives.some((alternative) => result[alternative] === bet[column])) {
     return "almost";
   }

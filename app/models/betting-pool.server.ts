@@ -39,12 +39,14 @@ export async function getPool(id: BettingPool["id"]) {
 
 export async function createBettingPool(
   name: BettingPool["name"],
-  ownerId: User["id"]
+  ownerId: User["id"],
+  year: BettingPool["year"]
 ) {
   return prisma.bettingPool.create({
     data: {
       name,
       ownerId,
+      year,
     },
   });
 }

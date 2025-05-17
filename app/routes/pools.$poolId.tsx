@@ -31,7 +31,7 @@ export const loader = async ({ params, request }: LoaderArgs) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const result = await getResult(2023);
+  const result = await getResult(pool.year || 2024);
 
   const bets = calculatePoints(pool.bets, result).sort(
     (a, b) => b.points - a.points
