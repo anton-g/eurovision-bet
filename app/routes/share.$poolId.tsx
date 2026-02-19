@@ -71,21 +71,21 @@ export default function PoolDetailsPage() {
 
   return (
     <div className="mx-auto max-w-fit p-3 pb-16">
-      <div className="mx-auto mt-10 flex h-full w-full max-w-lg flex-col items-center">
-        <div className="relative flex flex-col pb-16">
+      <div className="mx-auto mt-20 flex h-full w-full max-w-lg flex-col items-center">
+        <div className="relative flex flex-col pb-4">
           <div className="relative">
             <img
               className=" max-h-64 object-contain"
               src="/eurovision_logo_dont_sue_me.png"
               alt="Eurovision Song Contest Logo"
             />
-            <p className="absolute bottom-0 right-0 -rotate-12 text-2xl font-black text-violet-600">
-              BETS!
+            <p className="absolute -left-10 -top-5 -rotate-12 text-2xl font-black text-violet-600">
+              SLÄKTEN GISSAR
             </p>
           </div>
         </div>
       </div>
-      <h4 className="mb-8 text-center text-3xl font-bold">{data.pool.name}</h4>
+      <h4 className="mb-16 text-center text-3xl font-bold">{data.pool.year}</h4>
       <div className="relative max-w-fit overflow-x-auto">
         {showComparison && (
           <p className="text-xs text-gray-500">
@@ -289,6 +289,11 @@ function ComparePosition({
 }) {
   if (!comparePosition) return null;
   const diff = comparePosition - position;
+
+  if (diff === 0) {
+    return <span className={"text-xs text-green-600"}> (0 -)</span>;
+  }
+
   const isPositiveDiff = diff > 0;
   const textDiff = isPositiveDiff ? `${diff} ↗` : `${Math.abs(diff)} ↘`;
 

@@ -37,6 +37,15 @@ export async function getPool(id: BettingPool["id"]) {
   });
 }
 
+export async function getAllPools() {
+  return prisma.bettingPool.findMany({
+    orderBy: {
+      year: "desc",
+    },
+    ...bettingPoolFull,
+  });
+}
+
 export async function createBettingPool(
   name: BettingPool["name"],
   ownerId: User["id"],

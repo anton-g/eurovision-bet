@@ -46,18 +46,22 @@ export default function PoolsPage() {
             <p className="p-4">No pools yet</p>
           ) : (
             <ol>
-              {data.pools.map((pool) => (
-                <li key={pool.id}>
-                  <NavLink
-                    className={({ isActive }) =>
-                      `block border-b p-4 text-xl ${isActive ? "bg-white" : ""}`
-                    }
-                    to={pool.id}
-                  >
-                    {getRandomPoolEmoji(pool.name)} {pool.name}
-                  </NavLink>
-                </li>
-              ))}
+              {data.pools
+                .sort((a, b) => a.year! - b.year!)
+                .map((pool) => (
+                  <li key={pool.id}>
+                    <NavLink
+                      className={({ isActive }) =>
+                        `block border-b p-4 text-xl ${
+                          isActive ? "bg-white" : ""
+                        }`
+                      }
+                      to={pool.id}
+                    >
+                      {getRandomPoolEmoji(pool.name)} {pool.name}
+                    </NavLink>
+                  </li>
+                ))}
             </ol>
           )}
 
@@ -92,10 +96,12 @@ export function hashStr(str: string) {
 
 export const getRandomPoolEmoji = (input: string) => {
   // Emojis related to Eurovision Song Contest
-  const emoji = ["👩‍🎤", "👨‍🎤", "🧑‍🎤", "🏳️‍🌈", "🌈", "🦄", "🦋", "🐝", "🐞"];
+  const emoji = ["👩‍🎤", "👨‍🎤", "🧑‍🎤", "🏳️‍🌈", "🌈", "🦄", "🦋", "🐝", "🐞", "🎤"];
 
   const hash = hashStr(input);
   const index = (hash % Object.keys(emoji).length) + 1;
+
+  console.log(index);
 
   return emoji[index];
 };
