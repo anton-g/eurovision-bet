@@ -85,7 +85,7 @@ export const loader = async ({ request }: LoaderArgs) => {
 export default function PoolsPage() {
   const data = useLoaderData<typeof loader>();
 
-  const years = [2021, 2022, 2023, 2024, 2025];
+  const years = [2021, 2022, 2023, 2024, 2025, 2026];
 
   const placementResults = Object.entries(data.bets)
     .filter(([_, bets]) => bets.some((x) => x.year === years.at(-1)))

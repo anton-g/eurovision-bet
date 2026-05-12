@@ -8,6 +8,7 @@ export default function ResultPage() {
       <Link to="/pools/result/2023">2023</Link>
       <Link to="/pools/result/2024">2024</Link>
       <Link to="/pools/result/2025">2025</Link>
+      <Link to="/pools/result/2026">2026</Link>
     </div>
   );
 }

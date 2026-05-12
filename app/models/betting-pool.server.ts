@@ -39,6 +39,11 @@ export async function getPool(id: BettingPool["id"]) {
 
 export async function getAllPools() {
   return prisma.bettingPool.findMany({
+    where: {
+      name: {
+        contains: "Släkten",
+      },
+    },
     orderBy: {
       year: "desc",
     },
