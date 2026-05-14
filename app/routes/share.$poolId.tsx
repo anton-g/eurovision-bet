@@ -11,7 +11,7 @@ import invariant from "tiny-invariant";
 import { getPool as getBettingPool } from "~/models/betting-pool.server";
 import { getCountries } from "~/models/country.server";
 import { getResult } from "~/models/result.server";
-import { calculatePoints } from "~/utils";
+import { calculatePoints, getCompetitionRanks } from "~/utils";
 
 export const loader = async ({ params, request }: LoaderArgs) => {
   invariant(params.poolId, "poolId not found");
@@ -26,15 +26,23 @@ export const loader = async ({ params, request }: LoaderArgs) => {
   const bets = calculatePoints(pool.bets, result).sort(
     (a, b) => b.points - a.points
   );
+  const positions = getCompetitionRanks(bets);
 
   const simulatedResult = simulateResult(pool.bets, await getCountries());
+  const simulatedResultEntries = Object.values(simulatedResult).sort(
+    (a, b) => b.score - a.score
+  );
+  const simulatedResultPositions = getCompetitionRanks(
+    simulatedResultEntries.map((country) => ({ points: country.score }))
+  );
 
   const url = new URL(request.url);
   const compareId = url.searchParams.get("compare");
 
   let betsWithCompare: (ReturnType<typeof calculatePoints>[0] & {
+    position: number;
     compare?: { points: number; position: number };
-  })[] = bets;
+  })[] = bets.map((bet, index) => ({ ...bet, position: positions[index] }));
   if (compareId) {
     const comparePool = await getBettingPool(compareId);
     if (!comparePool) {
@@ -45,21 +53,33 @@ export const loader = async ({ params, request }: LoaderArgs) => {
     const compareBets = calculatePoints(comparePool.bets, compareResult).sort(
       (a, b) => b.points - a.points
     );
+    const comparePositions = getCompetitionRanks(compareBets);
 
-    betsWithCompare = bets.map((bet, index) => {
+    betsWithCompare = betsWithCompare.map((bet) => {
       const compareBetIndex = compareBets.findIndex((x) => x.name === bet.name);
       const compareBet = compareBets[compareBetIndex];
 
       return {
         ...bet,
         compare: compareBet
-          ? { points: compareBet.points, position: compareBetIndex + 1 }
+          ? {
+              points: compareBet.points,
+              position: comparePositions[compareBetIndex],
+            }
           : undefined,
       };
     });
   }
 
-  return json({ pool, bets: betsWithCompare, result, simulatedResult });
+  return json({
+    pool,
+    bets: betsWithCompare,
+    result,
+    simulatedResult: simulatedResultEntries.map((country, index) => ({
+      ...country,
+      position: simulatedResultPositions[index],
+    })),
+  });
 };
 
 export default function PoolDetailsPage() {
@@ -123,16 +143,16 @@ export default function PoolDetailsPage() {
             </tr>
           </thead>
           <tbody>
-            {data.bets.map((bet, index) => (
+            {data.bets.map((bet) => (
               <tr key={bet.id} className="border-b dark:border-neutral-500">
                 <td className="whitespace-nowrap px-6 py-2 text-left">
-                  {index + 1}
+                  {bet.position}
                   <ComparePosition
-                    position={index + 1}
+                    position={bet.position}
                     comparePosition={bet.compare?.position}
                   />
                 </td>
-                <NameCell showResult={showResult} position={index + 1}>
+                <NameCell showResult={showResult} position={bet.position}>
                   {bet.name}
                 </NameCell>
                 <td className="whitespace-nowrap px-6 py-2 text-left">
@@ -232,21 +252,22 @@ export default function PoolDetailsPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.values(data.simulatedResult)
-                  .sort((a, b) => b.score - a.score)
-                  .map((country, index) => (
-                    <tr
-                      key={country.name}
-                      className="border-b dark:border-neutral-500"
+                {data.simulatedResult.map((country) => (
+                  <tr
+                    key={country.name}
+                    className="border-b dark:border-neutral-500"
+                  >
+                    <NameCell
+                      showResult={showResult}
+                      position={country.position}
                     >
-                      <NameCell showResult={showResult} position={index + 1}>
-                        {country.name}
-                      </NameCell>
-                      <td className="whitespace-nowrap px-6 py-2">
-                        {country.score}
-                      </td>
-                    </tr>
-                  ))}
+                      {country.name}
+                    </NameCell>
+                    <td className="whitespace-nowrap px-6 py-2">
+                      {country.score}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

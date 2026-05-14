@@ -81,6 +81,22 @@ export function calculatePoints<T extends BettingPoolFull>(
   return bets.map((x) => ({ ...x, points: calculatePoint(x, result) }));
 }
 
+export function getCompetitionRanks<T extends { points: number }>(
+  entries: T[]
+) {
+  let previousPoints: number | undefined;
+  let previousRank = 0;
+
+  return entries.map((entry, index) => {
+    if (entry.points !== previousPoints) {
+      previousPoints = entry.points;
+      previousRank = index + 1;
+    }
+
+    return previousRank;
+  });
+}
+
 function calculatePoint(bet: Bet, result: Result): number {
   let points = 0;
   // 1an på rätt plats, 4p
