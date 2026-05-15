@@ -1,0 +1,1 @@
+ALTER TABLE "Participant" ADD COLUMN "hidden" BOOLEAN NOT NULL DEFAULT false;

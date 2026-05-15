@@ -37,11 +37,24 @@ model BettingPool {
   bets    Bet[]
 }
 
+model Participant {
+  id String @id @default(cuid())
+
+  name           String
+  hidden         Boolean @default(false)
+  normalizedName String  @unique
+
+  bets Bet[]
+}
+
 model Bet {
   id String @id @default(cuid())
 
   pool   BettingPool @relation(fields: [poolId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   poolId String
+
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  participantId String
 
   firstPlace          Country @relation("bet_first_place_country", fields: [firstPlaceCountryId], references: [id])
   firstPlaceCountryId Int
@@ -61,6 +74,9 @@ model Bet {
   swedenPosition Int
 
   name String
+
+  @@unique([poolId, participantId])
+  @@index([participantId])
 }
 
 model Result {

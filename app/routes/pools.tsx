@@ -68,12 +68,17 @@ export default function PoolsPage() {
           <hr />
 
           {user.admin && (
-            <Link
-              to="result"
-              className="text-l mt-auto block p-2 px-4 text-blue-500"
-            >
-              Update result
-            </Link>
+            <div className="mt-auto flex flex-col">
+              <Link
+                to="participants"
+                className="text-l block p-2 px-4 text-blue-500"
+              >
+                Manage participants
+              </Link>
+              <Link to="result" className="text-l block p-2 px-4 text-blue-500">
+                Update result
+              </Link>
+            </div>
           )}
         </div>
 

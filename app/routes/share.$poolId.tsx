@@ -2,6 +2,7 @@ import type { Bet, Country, Result } from "@prisma/client";
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
+  Link,
   isRouteErrorResponse,
   useLoaderData,
   useRouteError,
@@ -12,6 +13,7 @@ import { getPool as getBettingPool } from "~/models/betting-pool.server";
 import { getCountries } from "~/models/country.server";
 import { getResult } from "~/models/result.server";
 import { calculatePoints, getCompetitionRanks } from "~/utils";
+import { formatCountryLabel } from "~/utils/country";
 
 export const loader = async ({ params, request }: LoaderArgs) => {
   invariant(params.poolId, "poolId not found");
@@ -56,7 +58,9 @@ export const loader = async ({ params, request }: LoaderArgs) => {
     const comparePositions = getCompetitionRanks(compareBets);
 
     betsWithCompare = betsWithCompare.map((bet) => {
-      const compareBetIndex = compareBets.findIndex((x) => x.name === bet.name);
+      const compareBetIndex = compareBets.findIndex(
+        (x) => getParticipantKey(x) === getParticipantKey(bet)
+      );
       const compareBet = compareBets[compareBetIndex];
 
       return {
@@ -153,7 +157,16 @@ export default function PoolDetailsPage() {
                   />
                 </td>
                 <NameCell showResult={showResult} position={bet.position}>
-                  {bet.name}
+                  {bet.participantId ? (
+                    <Link
+                      className="text-current no-underline hover:opacity-70"
+                      to={`/participants/${bet.participantId}`}
+                    >
+                      {getParticipantDisplayName(bet)}
+                    </Link>
+                  ) : (
+                    getParticipantDisplayName(bet)
+                  )}
                 </NameCell>
                 <td className="whitespace-nowrap px-6 py-2 text-left">
                   {bet.points}
@@ -170,7 +183,7 @@ export default function PoolDetailsPage() {
                     "firstPlaceCountryId"
                   )}
                 >
-                  {bet.firstPlace.name}
+                  {formatCountryLabel(bet.firstPlace)}
                 </Cell>
                 <Cell
                   showResult={showResult}
@@ -180,7 +193,7 @@ export default function PoolDetailsPage() {
                     "secondPlaceCountryId"
                   )}
                 >
-                  {bet.secondPlace.name}
+                  {formatCountryLabel(bet.secondPlace)}
                 </Cell>
                 <Cell
                   showResult={showResult}
@@ -190,7 +203,7 @@ export default function PoolDetailsPage() {
                     "thirdPlaceCountryId"
                   )}
                 >
-                  {bet.thirdPlace.name}
+                  {formatCountryLabel(bet.thirdPlace)}
                 </Cell>
                 <Cell
                   showResult={showResult}
@@ -200,7 +213,7 @@ export default function PoolDetailsPage() {
                     "fourthPlaceCountryId"
                   )}
                 >
-                  {bet.fourthPlace.name}
+                  {formatCountryLabel(bet.fourthPlace)}
                 </Cell>
                 <Cell
                   showResult={showResult}
@@ -210,7 +223,7 @@ export default function PoolDetailsPage() {
                     "fifthPlaceCountryId"
                   )}
                 >
-                  {bet.fifthPlace.name}
+                  {formatCountryLabel(bet.fifthPlace)}
                 </Cell>
                 <Cell
                   showResult={showResult}
@@ -495,3 +508,19 @@ const simulateResult = (bets: Bet[], countries: Country[]) => {
     return acc;
   }, {} as Record<string, { name: string; score: number }>);
 };
+
+function getParticipantDisplayName(
+  bet: Pick<Bet, "name"> & {
+    participant?: { name: string } | null;
+  }
+) {
+  return bet.participant?.name ?? bet.name;
+}
+
+function getParticipantKey(
+  bet: Pick<Bet, "name"> & {
+    participantId?: string | null;
+  }
+) {
+  return bet.participantId ?? bet.name;
+}

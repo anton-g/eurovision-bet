@@ -2,7 +2,9 @@ import type { ActionArgs, LoaderArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
   Form,
+  Link,
   isRouteErrorResponse,
+  useActionData,
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
@@ -21,6 +23,8 @@ import { CountrySelect } from "../components/CountrySelect";
 import { getResult } from "~/models/result.server";
 import { calculatePoints } from "~/utils";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
+import { getParticipantOptions } from "~/models/participant.server";
+import { formatCountryLabel } from "~/utils/country";
 
 export const loader = async ({ params, request }: LoaderArgs) => {
   await requireUserId(request);
@@ -38,8 +42,9 @@ export const loader = async ({ params, request }: LoaderArgs) => {
   );
 
   const countries = await getCountries();
+  const participants = await getParticipantOptions();
 
-  return json({ pool, bets, countries });
+  return json({ pool, bets, countries, participants });
 };
 
 export const action = async ({ params, request }: ActionArgs) => {
@@ -75,7 +80,8 @@ export const action = async ({ params, request }: ActionArgs) => {
   }
 
   const name = formData.get("name");
-  if (typeof name !== "string" || name.length === 0) {
+  const trimmedName = typeof name === "string" ? name.trim() : "";
+  if (trimmedName.length === 0) {
     return json(
       { errors: { body: null, title: "Name is required" } },
       { status: 400 }
@@ -143,9 +149,9 @@ export const action = async ({ params, request }: ActionArgs) => {
     );
   }
 
-  await addBet({
+  const bet = await addBet({
     poolId: params.poolId,
-    name,
+    name: trimmedName,
     firstPlaceCountryId: position1,
     secondPlaceCountryId: position2,
     thirdPlaceCountryId: position3,
@@ -154,22 +160,43 @@ export const action = async ({ params, request }: ActionArgs) => {
     swedenPosition,
   });
 
+  if (!bet) {
+    return json(
+      {
+        errors: {
+          body: null,
+          title: "Participant already has a bet in this pool",
+        },
+      },
+      { status: 400 }
+    );
+  }
+
   return json({});
 };
 
 export default function PoolDetailsPage() {
   const data = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const actionError =
+    actionData && typeof actionData === "object" && "errors" in actionData
+      ? (actionData.errors as { body: string | null; title: string | null })
+      : null;
 
   return (
     <div className="flex h-full flex-col">
       <h3 className="text-2xl font-bold">{data.pool.name}</h3>
       <hr className="my-4" />
+      {actionError?.title ? (
+        <p className="mb-3 text-sm text-red-600">{actionError.title}</p>
+      ) : null}
       <Form method="post" className="flex flex-row gap-2 ">
         <input type="hidden" name="action" value="add" />
         <label className="flex w-40 flex-col gap-1">
           <span>Name: </span>
           <input
             name="name"
+            list="participants"
             className="flex-1 rounded-md border-2 border-blue-500 px-3 text-lg leading-loose"
           />
         </label>
@@ -207,6 +234,11 @@ export default function PoolDetailsPage() {
         >
           Add
         </button>
+        <datalist id="participants">
+          {data.participants.map((participant) => (
+            <option key={participant.id} value={participant.name} />
+          ))}
+        </datalist>
       </Form>
       <hr className="my-4" />
       <h4 className="text-xl font-bold">Bets</h4>
@@ -244,22 +276,31 @@ export default function PoolDetailsPage() {
           {data.bets.map((bet) => (
             <tr key={bet.id} className="border-b dark:border-neutral-500">
               <td className="whitespace-nowrap px-6 py-2 font-medium">
-                {bet.name}
+                {bet.participantId ? (
+                  <Link
+                    className="text-current no-underline hover:opacity-70"
+                    to={`/participants/${bet.participantId}`}
+                  >
+                    {bet.participant?.name ?? bet.name}
+                  </Link>
+                ) : (
+                  bet.participant?.name ?? bet.name
+                )}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
-                {bet.firstPlace.name}
+                {formatCountryLabel(bet.firstPlace)}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
-                {bet.secondPlace.name}
+                {formatCountryLabel(bet.secondPlace)}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
-                {bet.thirdPlace.name}
+                {formatCountryLabel(bet.thirdPlace)}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
-                {bet.fourthPlace.name}
+                {formatCountryLabel(bet.fourthPlace)}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
-                {bet.fifthPlace.name}
+                {formatCountryLabel(bet.fifthPlace)}
               </td>
               <td className="whitespace-nowrap px-6 py-2">
                 {bet.swedenPosition}

@@ -1,11 +1,13 @@
 import type { BettingPool, User } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "~/db.server";
+import { getOrCreateParticipant } from "~/models/participant.server";
 
 const bettingPoolFull = Prisma.validator<Prisma.BettingPoolArgs>()({
   include: {
     bets: {
       include: {
+        participant: true,
         firstPlace: true,
         secondPlace: true,
         thirdPlace: true,
@@ -96,10 +98,25 @@ export async function addBet({
   fifthPlaceCountryId: number;
   swedenPosition: number;
 }) {
+  const trimmedName = name.trim();
+  const participant = await getOrCreateParticipant(trimmedName);
+
+  const existingBet = await prisma.bet.findFirst({
+    where: {
+      poolId,
+      participantId: participant.id,
+    },
+  });
+
+  if (existingBet) {
+    return null;
+  }
+
   return prisma.bet.create({
     data: {
       poolId,
-      name,
+      name: trimmedName,
+      participantId: participant.id,
       firstPlaceCountryId,
       secondPlaceCountryId,
       thirdPlaceCountryId,
